@@ -7,6 +7,8 @@ from tornado.httpclient import AsyncHTTPClient
 
 class GirderAuthenticator(Authenticator):
 
+    login_service = "Girder"
+
     api_url = Unicode(
         help='The url to the girder server to use for token validation',
         default_value='http://localhost:8080/api/v1',
@@ -23,7 +25,20 @@ class GirderAuthenticator(Authenticator):
     enable_auth_state = True
 
     @gen.coroutine
+    def login_url(self, base_url):
+        provider_url = '%s/oauth/provider?redirect=https%3A%2F%2Fcropsinsilico.ndslabs.org%2Fhub' % (self.api_url)
+        http_client = AsyncHTTPClient()
+        r = yield http_client.fetch(provider_url, headers=headers)
+        if r.code == 200:
+            response_json = json.loads(r.body.decode('utf8')) 
+            if response_json is not None:
+               login_url = response_json['Github']     
+               return login_url
+        return None
+
+    @gen.coroutine
     def authenticate(self, handler, data):
+        print(data)  
         if 'Girder-Token' in data:
             me_url = '%s/user/me' % self.api_url
             girder_token = data['Girder-Token']
